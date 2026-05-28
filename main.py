@@ -14,8 +14,8 @@ class Carta:
     Definisce una carta da gioco
     """
 
-    elencoSemi = ["Fiori", "Quadri", "Picche", "Cuori"]
-    elencoValori = ["", "Asso", "2", "3", "4", "5", "6", "7", "Fante", "Cavallo", "Re"]
+    elencoSemi = ["Fiori", "Quadri", "Cuori", "Picche"]
+    elencoValori = ["", "Asso", "2", "3", "4", "5", "6", "7", "Fante", "Regina", "Re"]
     ordineImportanza = [1, 3, 10, 9, 8, 7, 6, 5, 4, 2]
 
     def __init__(self, seme, valore):
@@ -29,6 +29,9 @@ class Carta:
         return self.ordineImportanza.index(self.valore) < self.ordineImportanza.index(
             altro.valore
         )
+
+    def __str__(self):
+        return f"{self.elencoValori[self.valore]} di {self.elencoSemi[self.seme]}"
 
 
 class Mazzo:
@@ -134,10 +137,14 @@ class Tavolo:
 
 
 class Giocatore:
-    def __init__(self):
+    def __init__(self, nome):
+        self.nome = nome
         self.mano = Mano()
         self.prese = []
         self.punti = 0
+
+    def __str__(self):
+        return self.nome
 
 
 class GiocoBriscola:
@@ -169,7 +176,7 @@ class GiocoBriscola:
         self.m = SpriteCarta(Carta(0, 0), self.posizioni["m"])
 
         # Crea il giocatore umano ed il tavolo
-        self.listaGiocatori = [Giocatore(), Giocatore()]
+        self.listaGiocatori = [Giocatore("Giocatore"), Giocatore("Computer")]
         self.tavolo = Tavolo()
         # Prende la briscola
         self.tavolo.briscola = self.tavolo.mazzo.carte[0]
@@ -184,37 +191,20 @@ class GiocoBriscola:
             if self.listaGiocatori[0].mano.EVuoto():
                 break
         self.ContaPunti()
-        if self.listaGiocatori[0].punti > self.listaGiocatori[1].punti:
-            print(
-                " " * 5
-                + "%s vince con %i punti"
-                % (self.listaGiocatori[0], self.listaGiocatori[0].punti)
-            )
-            print(
-                " " * 5
-                + "%s totalizza %i punti"
-                % (self.listaGiocatori[1], self.listaGiocatori[1].punti)
-            )
-        elif self.listaGiocatori[1].punti > self.listaGiocatori[0].punti:
-            print(
-                " " * 5
-                + "%s vince con %i punti"
-                % (self.listaGiocatori[1], self.listaGiocatori[1].punti)
-            )
-            print(
-                " " * 5
-                + "%s totalizza %i punti"
-                % (self.listaGiocatori[0], self.listaGiocatori[0].punti)
-            )
-        else:
-            print(" " * 5 + "La partita finisce patta!")
         self.screen.blit(self.sfondo, (0, 0))
-        pygame.display.flip()
+        p0, p1 = self.listaGiocatori[0].punti, self.listaGiocatori[1].punti
+        if p0 > p1:
+            self.messaggio("%s vince! %d - %d" % (self.listaGiocatori[0], p0, p1))
+        elif p1 > p0:
+            self.messaggio("%s vince! %d - %d" % (self.listaGiocatori[1], p1, p0))
+        else:
+            self.messaggio("Pareggio! %d - %d" % (p0, p1))
         while 1:
             if pygame.event.poll().type == pygame.locals.QUIT:
                 sys.exit(0)
 
     def GiocaUnaMano(self):
+        self.pressed = None
         # Scelta della carta e messa sul tavolo
         if len(self.listaGiocatori[0].mano.carte) >= 1:
             self.s0 = SpriteCarta(
@@ -239,18 +229,17 @@ class GiocoBriscola:
             cartaDaGiocare = self.listaGiocatori[0].mano.carte.pop(indiceCartaDaGiocare)
             self.tavolo.carte.append(cartaDaGiocare)
             self.t1 = SpriteCarta(cartaDaGiocare, self.posizioni["t1"])
+            [self.s0, self.s1, self.s2][indiceCartaDaGiocare].rect.topleft = (-200, -200)
+            self.pressed = None
             # Secondo turno
-            indiceCartaDaGiocare = randint(0, len(self.listaGiocatori[0].mano.carte))
+            indiceCartaDaGiocare = randint(0, len(self.listaGiocatori[1].mano.carte) - 1)
             cartaDaGiocare = self.listaGiocatori[1].mano.carte.pop(indiceCartaDaGiocare)
             self.tavolo.carte.append(cartaDaGiocare)
             self.t0 = SpriteCarta(cartaDaGiocare, self.posizioni["t0"])
 
             self.draw()
+            self.t1.draw(self.screen)
             self.t0.draw(self.screen)
-            pygame.display.flip()
-            cur_time = time()
-            while time() - cur_time < 1:
-                pass
         if self.tavolo.vincitore == 1:
             indiceCartaDaGiocare = randint(
                 0, len(self.listaGiocatori[1].mano.carte) - 1
@@ -263,26 +252,21 @@ class GiocoBriscola:
             cartaDaGiocare = self.listaGiocatori[0].mano.carte.pop(indiceCartaDaGiocare)
             self.tavolo.carte.append(cartaDaGiocare)
             self.t1 = SpriteCarta(cartaDaGiocare, self.posizioni["t1"])
+            [self.s0, self.s1, self.s2][indiceCartaDaGiocare].rect.topleft = (-200, -200)
+            self.pressed = None
 
             self.draw()
+            self.t1.draw(self.screen)
             self.t0.draw(self.screen)
-            pygame.display.flip()
-            cur_time = time()
-            while time() - cur_time < 1:
-                pass
         # Chi vince
         self.cartaVincitrice = self.tavolo.Compara()
         self.tavolo.vincitore = (self.tavolo.vincitore + self.cartaVincitrice) % len(
             self.listaGiocatori
         )
-        print(
-            " " * 5
-            + "%s con un %s vince la mano\n"
-            % (
-                self.listaGiocatori[self.tavolo.vincitore],
-                self.tavolo.carte[self.cartaVincitrice],
-            )
-        )
+        self.messaggio("%s con un %s vince la mano" % (
+            self.listaGiocatori[self.tavolo.vincitore],
+            self.tavolo.carte[self.cartaVincitrice],
+        ))
         # Ultimazioni per riniziare mano
         self.listaGiocatori[self.tavolo.vincitore].prese.extend(self.tavolo.carte)
         self.tavolo.carte[:] = []
@@ -300,9 +284,17 @@ class GiocoBriscola:
         except IndexError:
             pass
 
+    def messaggio(self, testo):
+        font = pygame.font.SysFont(None, 32)
+        surf = font.render(testo, True, (255, 255, 0))
+        self.screen.blit(surf, (300 - surf.get_width() // 2, 220))
+        pygame.display.flip()
+        cur_time = time()
+        while time() - cur_time < 3:
+            pygame.event.pump()
+
     def ScegliCarta(self):
         self.pressed = None
-        pressed = None
         while 1:
             self.draw()
             for event in pygame.event.get():
@@ -313,6 +305,12 @@ class GiocoBriscola:
                     for s, j in [(self.s0, 0), (self.s1, 1), (self.s2, 2)]:
                         if self.t1.rect.colliderect(s):
                             return j
+                    if self.pressed == "s0" and self.s0.rect.topleft == self.posizioni["s0"]:
+                        return 0
+                    if self.pressed == "s1" and self.s1.rect.topleft == self.posizioni["s1"]:
+                        return 1
+                    if self.pressed == "s2" and self.s2.rect.topleft == self.posizioni["s2"]:
+                        return 2
                     for s, j in [(self.s0, "0"), (self.s1, "1"), (self.s2, "2")]:
                         s.rect.topleft = self.posizioni["s" + j]
                 if (
@@ -321,37 +319,37 @@ class GiocoBriscola:
                     and self.s0.rect.collidepoint(event.pos)
                 ):
                     self.down = True
-                    pressed = "s0"
+                    self.pressed = "s0"
                 if (
                     event.type == pygame.locals.MOUSEBUTTONDOWN
                     and event.button == 1
                     and self.s1.rect.collidepoint(event.pos)
                 ):
                     self.down = True
-                    pressed = "s1"
+                    self.pressed = "s1"
                 if (
                     event.type == pygame.locals.MOUSEBUTTONDOWN
                     and event.button == 1
                     and self.s2.rect.collidepoint(event.pos)
                 ):
                     self.down = True
-                    pressed = "s2"
+                    self.pressed = "s2"
                 if (
                     self.down == True
                     and event.type == pygame.locals.MOUSEMOTION
-                    and pressed == "s0"
+                    and self.pressed == "s0"
                 ):
                     self.s0.update(event.rel)
                 if (
                     self.down == True
                     and event.type == pygame.locals.MOUSEMOTION
-                    and pressed == "s1"
+                    and self.pressed == "s1"
                 ):
                     self.s1.update(event.rel)
                 if (
                     self.down == True
                     and event.type == pygame.locals.MOUSEMOTION
-                    and pressed == "s2"
+                    and self.pressed == "s2"
                 ):
                     self.s2.update(event.rel)
                 pygame.display.flip()
